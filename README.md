@@ -6,7 +6,7 @@ This is a tool to perform escape analysis on C/C++ code using LLVM's capture tra
 
 ## Example Usage
 ```
-$ ./EscapeAnalysisTool sample.ll > results.csv
+$ ./EscapeAnalysisTool -i sample.ll -o results.csv
 ```
 `results.csv`:
 ```
@@ -14,5 +14,6 @@ FileName,NumFunctions,NumEscapingFunctions
 samples/sample.ll,2,0
 ```
 
-## Dependencies
-Currently the only dependency is llvm. The command `vcpkg install llvm` is enough for me to get it to build.
+## Dependencies (vcpkg)
+- `llvm`
+- `cxxopts`

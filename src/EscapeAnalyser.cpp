@@ -16,8 +16,6 @@
 
 #define MAX_USES_TO_EXPLORE 10000
 
-#define DEBUG_PRINT 1
-
 namespace EscapeAnalysisTool {
 
 EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err)
@@ -25,7 +23,7 @@ EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& e
 {
 }
 
-void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer)
+void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer, bool verbose)
 {
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
     if (!module) {
@@ -45,7 +43,7 @@ void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer)
     writer.addEntry(filePath, functionsCount, unsafeFunctionsCount);
 }
 
-bool EscapeAnalyser::pointerToStackAllocationMayEscape(const llvm::Function& function)
+bool EscapeAnalyser::pointerToStackAllocationMayEscape(const llvm::Function& function, bool verbose)
 {
     for (const llvm::BasicBlock& basicBlock : function.getBasicBlockList()) {
         for (const llvm::Instruction& instruction : basicBlock.getInstList()) {
@@ -58,11 +56,10 @@ bool EscapeAnalyser::pointerToStackAllocationMayEscape(const llvm::Function& fun
             if (llvm::PointerMayBeCaptured(&instruction, true, false, MAX_USES_TO_EXPLORE)) {
 
                 // We found a capture
-
-#if DEBUG_PRINT
-                std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName()) << "\n    dump: ";
-                instruction.dump();
-#endif
+                if (verbose) {
+                    std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName()) << "\n    dump: ";
+                    instruction.dump();
+                }
                 return true;
             }
 

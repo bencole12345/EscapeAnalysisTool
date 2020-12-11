@@ -5,8 +5,8 @@ project(EscapeAnalysisTool)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#find_package(Clang CONFIG REQUIRED)
 find_package(LLVM CONFIG REQUIRED)
+find_package(cxxopts CONFIG REQUIRED)
 
 # Need these to get LLVM to work
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -17,7 +17,6 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 add_executable(EscapeAnalysisTool
         src/main.cpp
-        src/ArgumentParser.cpp
         src/CSVWriter.cpp
         src/EscapeAnalyser.cpp)
 
@@ -26,5 +25,5 @@ llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
 
 target_link_libraries(EscapeAnalysisTool
         PRIVATE
-            ${llvm_libs})
-#            clang)
+            ${llvm_libs}
+            cxxopts::cxxopts)

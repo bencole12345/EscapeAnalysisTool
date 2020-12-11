@@ -22,8 +22,8 @@ private:
 public:
     EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err);
 
-    void processFile(const std::string& filePath, CSVWriter& writer);
-    bool pointerToStackAllocationMayEscape(const llvm::Function& function);
+    void processFile(const std::string& filePath, CSVWriter& writer, bool verbose = false);
+    bool pointerToStackAllocationMayEscape(const llvm::Function& function, bool verbose = false);
 
 private:
     bool valueIsFunctionArgument(const llvm::Value *value, const llvm::Function& function);
