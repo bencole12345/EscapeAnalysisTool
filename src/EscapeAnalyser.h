@@ -14,19 +14,44 @@
 
 namespace EscapeAnalysisTool {
 
+/**
+ * Wraps state for performing LLVM's escape analysis on a .ll file.
+ */
 class EscapeAnalyser {
 private:
+    /**
+     * Required for parsing the LLVM IR code
+     */
     llvm::LLVMContext& context;
     llvm::SMDiagnostic& err;
 
-public:
-    EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err);
+    /**
+     * Where to write the CSV output to
+     */
+    CSVWriter& writer;
 
-    void processFile(const std::string& filePath, CSVWriter& writer, bool verbose = false);
-    bool pointerToStackAllocationMayEscape(const llvm::Function& function, bool verbose = false);
+    /**
+     * Whether to print verbose/debug information to std::cout
+     */
+    bool verbose;
+
+public:
+    EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer, bool verbose);
+
+    /**
+     * Performs the analysis on a .ll file, writing the results to `writer`.
+     *
+     * @param filePath The file to process
+     */
+    void processFile(const std::string& filePath);
 
 private:
-    bool valueIsFunctionArgument(const llvm::Value *value, const llvm::Function& function);
+    /**
+     * Performs the analysis on a single function, writing the results to `writer`.
+     * @param function
+     */
+    void processFunction(const llvm::Function& function, const std::string& filePath);
+
 };
 
 } // namespace EscapeAnalysisTool

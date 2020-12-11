@@ -46,11 +46,11 @@ int main(int argc, char **argv)
     // Set up the escape analysis tool
     llvm::LLVMContext context;
     llvm::SMDiagnostic err;
-    EscapeAnalyser analyser(context, err);
+    EscapeAnalyser analyser(context, err, writer, verbose);
 
     // Analyse each file
     for (const std::string& path : inputFiles) {
-        analyser.processFile(path, writer, verbose);
+        analyser.processFile(path);
     }
 
     return 0;

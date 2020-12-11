@@ -8,7 +8,7 @@ CSVWriter::CSVWriter(std::string& outputFile)
         : outputStream()
 {
     outputStream.open(outputFile);
-    outputStream << "FileName,NumFunctions,NumEscapingFunctions" << std::endl;
+    outputStream << "FileName,FunctionName,NumStackAllocations,NumEscapingStackAllocations" << std::endl;
 }
 
 CSVWriter::~CSVWriter()
@@ -16,9 +16,16 @@ CSVWriter::~CSVWriter()
     outputStream.close();
 }
 
-void CSVWriter::addEntry(const std::string& fileName, int numFunctions, int numEscapingFunctions)
+void CSVWriter::addEntry(
+        const std::string& fileName,
+        const std::string& functionName,
+        int numStackAllocations,
+        int numEscapingStackAllocations)
 {
-    outputStream << fileName << "," << numFunctions << "," << numEscapingFunctions << std::endl;
+    outputStream << fileName << ","
+                 << functionName << ","
+                 << numStackAllocations << ","
+                 << numEscapingStackAllocations << std::endl;
 }
 
 } // namespace EscapeAnalysisTool

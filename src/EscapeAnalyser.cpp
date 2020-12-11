@@ -1,6 +1,8 @@
 #include "EscapeAnalyser.h"
 
+#include <algorithm>
 #include <iostream>
+#include <string>
 
 #include <llvm/Analysis/CaptureTracking.h>
 #include <llvm/Demangle/Demangle.h>
@@ -18,12 +20,12 @@
 
 namespace EscapeAnalysisTool {
 
-EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err)
-    : context(context), err(err)
+EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer, bool verbose)
+    : context(context), err(err), writer(writer), verbose(verbose)
 {
 }
 
-void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer, bool verbose)
+void EscapeAnalyser::processFile(const std::string& filePath)
 {
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
     if (!module) {
@@ -31,20 +33,16 @@ void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer,
         exit(2);
     }
 
-    int functionsCount = 0;
-    int unsafeFunctionsCount = 0;
-
     for (const llvm::Function& function : module->functions()) {
-        functionsCount++;
-        if (pointerToStackAllocationMayEscape(function))
-            unsafeFunctionsCount++;
+        processFunction(function, filePath);
     }
-
-    writer.addEntry(filePath, functionsCount, unsafeFunctionsCount);
 }
 
-bool EscapeAnalyser::pointerToStackAllocationMayEscape(const llvm::Function& function, bool verbose)
+void EscapeAnalyser::processFunction(const llvm::Function& function, const std::string& filePath)
 {
+    int numStackAllocationsTotal = 0;
+    int numEscapingStackAllocations = 0;
+
     for (const llvm::BasicBlock& basicBlock : function.getBasicBlockList()) {
         for (const llvm::Instruction& instruction : basicBlock.getInstList()) {
 
@@ -52,22 +50,30 @@ bool EscapeAnalyser::pointerToStackAllocationMayEscape(const llvm::Function& fun
             if (instruction.getOpcode() != llvm::Instruction::Alloca)
                 continue;
 
+            numStackAllocationsTotal++;
+
             // Run the analysis
-            if (llvm::PointerMayBeCaptured(&instruction, true, false, MAX_USES_TO_EXPLORE)) {
+            bool returnCaptures = true;
+            bool storeCaptures = true;
+            if (llvm::PointerMayBeCaptured(&instruction, returnCaptures, storeCaptures, MAX_USES_TO_EXPLORE)) {
 
                 // We found a capture
+                numEscapingStackAllocations++;
+
                 if (verbose) {
                     std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName()) << "\n    dump: ";
                     instruction.dump();
                 }
-                return true;
             }
-
         }
     }
 
-    // We failed to find a captured pointer so we can safely return false
-    return false;
+    // Write the results to the CSV file. We need to replace the commas in the
+    // functions' type lists with semicolons because it's a CSV file and that
+    // will mess up the parsing.
+    std::string functionName = llvm::demangle(function.getName());
+    std::replace(functionName.begin(), functionName.end(), ',', ';');
+    writer.addEntry(filePath, functionName, numStackAllocationsTotal, numEscapingStackAllocations);
 }
 
 } // namespace EscapeAnalysisTool
