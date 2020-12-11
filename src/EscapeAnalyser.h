@@ -7,6 +7,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Value.h>
 #include <llvm/Support/SourceMgr.h>
 
 #include "CSVWriter.h"
@@ -22,7 +23,10 @@ public:
     EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err);
 
     void processFile(const std::string& filePath, CSVWriter& writer);
-    bool pointerToLocalVariableMayEscape(const llvm::Function& function);
+    bool pointerToStackAllocationMayEscape(const llvm::Function& function);
+
+private:
+    bool valueIsFunctionArgument(const llvm::Value *value, const llvm::Function& function);
 };
 
 } // namespace EscapeAnalysisTool
