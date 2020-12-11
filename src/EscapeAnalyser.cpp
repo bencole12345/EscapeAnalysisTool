@@ -27,8 +27,11 @@ EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& e
 
 void EscapeAnalyser::processFile(const std::string& filePath, CSVWriter& writer)
 {
-    // TODO: Handle malformed file (at the moment it just exits)
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
+    if (!module) {
+        std::cerr << "Bad input file: " << filePath;
+        exit(2);
+    }
 
     int functionsCount = 0;
     int unsafeFunctionsCount = 0;
