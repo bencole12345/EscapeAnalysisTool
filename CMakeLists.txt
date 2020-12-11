@@ -18,7 +18,8 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 add_executable(EscapeAnalysisTool
         src/main.cpp
         src/CSVWriter.cpp
-        src/EscapeAnalyser.cpp)
+        src/EscapeAnalyser.cpp
+        src/FunctionSummary.cpp)
 
 # Determine which libraries we need to link against for LLVM
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis)

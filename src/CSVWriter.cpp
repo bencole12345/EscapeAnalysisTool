@@ -2,13 +2,16 @@
 
 #include <ostream>
 
+#include "FunctionSummary.h"
+
 namespace EscapeAnalysisTool {
 
 CSVWriter::CSVWriter(std::string& outputFile)
         : outputStream()
 {
     outputStream.open(outputFile);
-    outputStream << "FileName,FunctionName,NumStackAllocations,NumEscapingStackAllocations" << std::endl;
+    outputStream << "FileName;FunctionName;NumStackAllocations;NumEscapingStackAllocations;"
+                 << "TotalAllocatedStackMemory;TotalEscapingAllocateStackMemory" << std::endl;
 }
 
 CSVWriter::~CSVWriter()
@@ -16,16 +19,15 @@ CSVWriter::~CSVWriter()
     outputStream.close();
 }
 
-void CSVWriter::addEntry(
-        const std::string& fileName,
-        const std::string& functionName,
-        int numStackAllocations,
-        int numEscapingStackAllocations)
+void CSVWriter::addEntry(const FunctionSummary& summary)
 {
-    outputStream << fileName << ","
-                 << functionName << ","
-                 << numStackAllocations << ","
-                 << numEscapingStackAllocations << std::endl;
+    outputStream << summary.fileName << ";"
+                 << summary.functionName << ";"
+                 << summary.totalStackAllocations << ";"
+                 << summary.totalEscapingStackAllocations << ";"
+                 << summary.totalAllocatedStackMemory << ";"
+                 << summary.totalAllocatedEscapingStackMemory
+                 << std::endl;
 }
 
 } // namespace EscapeAnalysisTool

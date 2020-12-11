@@ -7,14 +7,17 @@
 #include <llvm/Analysis/CaptureTracking.h>
 #include <llvm/Demangle/Demangle.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 
 #include "CSVWriter.h"
+#include "FunctionSummary.h"
 
 #define MAX_USES_TO_EXPLORE 10000
 
@@ -34,14 +37,19 @@ void EscapeAnalyser::processFile(const std::string& filePath)
     }
 
     for (const llvm::Function& function : module->functions()) {
-        processFunction(function, filePath);
+        processFunction(function, module);
     }
 }
 
-void EscapeAnalyser::processFunction(const llvm::Function& function, const std::string& filePath)
+void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module)
 {
     int numStackAllocationsTotal = 0;
     int numEscapingStackAllocations = 0;
+
+    uint64_t stackAllocationsTotalSize = 0;
+    uint64_t escapingStackAllocationsTotalSize = 0;
+
+    llvm::DataLayout dataLayout(module.get());
 
     for (const llvm::BasicBlock& basicBlock : function.getBasicBlockList()) {
         for (const llvm::Instruction& instruction : basicBlock.getInstList()) {
@@ -50,15 +58,22 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, const std::
             if (instruction.getOpcode() != llvm::Instruction::Alloca)
                 continue;
 
+            // Extract the size of the allocatoin
+            const auto& allocation = reinterpret_cast<const llvm::AllocaInst&>(instruction);
+            uint64_t allocationSize = dataLayout.getTypeAllocSize(allocation.getAllocatedType()).getFixedSize();
+            // TODO: Handle non-constant allocation sizes (dynamically-sized)
+
             numStackAllocationsTotal++;
+            stackAllocationsTotalSize += allocationSize;
 
             // Run the analysis
             bool returnCaptures = true;
             bool storeCaptures = true;
-            if (llvm::PointerMayBeCaptured(&instruction, returnCaptures, storeCaptures, MAX_USES_TO_EXPLORE)) {
+            if (llvm::PointerMayBeCaptured(&allocation, returnCaptures, storeCaptures, MAX_USES_TO_EXPLORE)) {
 
                 // We found a capture
                 numEscapingStackAllocations++;
+                escapingStackAllocationsTotalSize += allocationSize;
 
                 if (verbose) {
                     std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName()) << "\n    dump: ";
@@ -68,12 +83,15 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, const std::
         }
     }
 
-    // Write the results to the CSV file. We need to replace the commas in the
-    // functions' type lists with semicolons because it's a CSV file and that
-    // will mess up the parsing.
     std::string functionName = llvm::demangle(function.getName());
-    std::replace(functionName.begin(), functionName.end(), ',', ';');
-    writer.addEntry(filePath, functionName, numStackAllocationsTotal, numEscapingStackAllocations);
+    writer.addEntry(FunctionSummary{
+            .fileName = module->getSourceFileName(),
+            .functionName = functionName,
+            .totalStackAllocations = numStackAllocationsTotal,
+            .totalEscapingStackAllocations = numEscapingStackAllocations,
+            .totalAllocatedStackMemory = stackAllocationsTotalSize,
+            .totalAllocatedEscapingStackMemory = escapingStackAllocationsTotalSize
+    });
 }
 
 } // namespace EscapeAnalysisTool

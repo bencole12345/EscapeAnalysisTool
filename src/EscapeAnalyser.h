@@ -50,7 +50,7 @@ private:
      * Performs the analysis on a single function, writing the results to `writer`.
      * @param function
      */
-    void processFunction(const llvm::Function& function, const std::string& filePath);
+    void processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module);
 
 };
 
