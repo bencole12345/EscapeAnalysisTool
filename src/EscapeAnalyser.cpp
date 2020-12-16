@@ -76,14 +76,14 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
                 escapingStackAllocationsTotalSize += allocationSize;
 
                 if (verbose) {
-                    std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName()) << "\n    dump: ";
+                    std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName().data()) << "\n    dump: ";
                     instruction.dump();
                 }
             }
         }
     }
 
-    std::string functionName = llvm::demangle(function.getName());
+    std::string functionName = llvm::demangle(function.getName().data());
     writer.addEntry(FunctionSummary{
             .fileName = module->getSourceFileName(),
             .functionName = functionName,
