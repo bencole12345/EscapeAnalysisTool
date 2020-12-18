@@ -45,7 +45,7 @@ void EscapeAnalyser::processFile(const std::string& filePath)
 {
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
     if (!module) {
-        std::cerr << "Bad input file: " << filePath;
+        std::cerr << "Bad input file: " << filePath << std::endl;
         exit(2);
     }
 
