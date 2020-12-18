@@ -4,14 +4,45 @@
 
 #include "FunctionSummary.h"
 
+namespace {
+
+const char * headings[] = {
+    "FileName",
+    "FunctionName",
+    "NumAllocaInvocations",
+    "NumEscapingAllocaInvocations",
+    "NumDynamicallySizedAllocaInvocations",
+    "NumDynamicallySizedEscapingAllocaInvocations",
+    "TotalStaticallyAllocatedStackMemory",
+    "TotalStaticallyAllocatedEscapingStackMemory"
+};
+
+const char * separator = ";";
+
+} // anonymous namespace
+
 namespace EscapeAnalysisTool {
 
 CSVWriter::CSVWriter(std::string& outputFile)
         : outputStream()
 {
     outputStream.open(outputFile);
-    outputStream << "FileName;FunctionName;NumStackAllocations;NumEscapingStackAllocations;"
-                 << "TotalAllocatedStackMemory;TotalEscapingAllocateStackMemory" << std::endl;
+
+    // Write each heading to the output file
+    size_t num_headings = sizeof(headings) / sizeof(*headings);
+    for (size_t i = 0; i < num_headings; i++) {
+        outputStream << headings[i];
+
+        // If it's the last one then end the line
+        if (i == num_headings - 1) {
+            outputStream << std::endl;
+        }
+
+        // Otherwise write the separator
+        else {
+            outputStream << separator;
+        }
+    }
 }
 
 CSVWriter::~CSVWriter()
@@ -19,14 +50,16 @@ CSVWriter::~CSVWriter()
     outputStream.close();
 }
 
-void CSVWriter::addEntry(const FunctionSummary& summary)
+void CSVWriter::addEntry(const FunctionSummary&& summary)
 {
-    outputStream << summary.fileName << ";"
-                 << summary.functionName << ";"
-                 << summary.totalStackAllocations << ";"
-                 << summary.totalEscapingStackAllocations << ";"
-                 << summary.totalAllocatedStackMemory << ";"
-                 << summary.totalAllocatedEscapingStackMemory
+    outputStream << summary.fileName << separator
+                 << summary.functionName << separator
+                 << summary.numAllocaInvocations << separator
+                 << summary.numEscapingAllocaInvocations << separator
+                 << summary.numDynamicallySizedAllocaInvocations << separator
+                 << summary.numDynamicallySizedEscapingAllocaInvocations << separator
+                 << summary.totalStaticallyAllocatedStackMemory << separator
+                 << summary.totalStaticallyAllocatedEscapingStackMemory
                  << std::endl;
 }
 

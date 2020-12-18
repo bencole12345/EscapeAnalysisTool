@@ -12,13 +12,13 @@ $ ./EscapeAnalysisTool -i samples/sample*.ll -o results.csv
 ```
 `results.csv`:
 ```
-FileName;FunctionName;NumStackAllocations;NumEscapingStackAllocations;TotalAllocatedStackMemory;TotalEscapingAllocateStackMemory
-samples/sample.cpp;main;1;0;4;0
-samples/sample.cpp;anotherFunction(int, int);2;0;8;0
-samples/sample.cpp;escapingFunction();1;1;4;4
-samples/sample.cpp;nonEscapingFunction(int*);2;0;12;0
-samples/sample.cpp;definitelyNonEscapingFunction(int*);1;0;8;0
-samples/sample2.cpp;allocateAnArrayOfTwelveInts();1;0;48;0
+FileName;FunctionName;NumAllocaInvocations;NumEscapingAllocaInvocations;NumDynamicallySizedAllocaInvocations;NumDynamicallySizedEscapingAllocaInvocations;TotalStaticallyAllocatedStackMemory;TotalStaticallyAllocatedEscapingStackMemory
+samples/sample.cpp;main;1;0;0;0;4;0
+samples/sample.cpp;anotherFunction(int, int);2;0;0;0;8;0
+samples/sample.cpp;escapingFunction();1;1;0;0;4;4
+samples/sample.cpp;nonEscapingFunction(int*);2;0;0;0;12;0
+samples/sample.cpp;definitelyNonEscapingFunction(int*);1;0;0;0;8;0
+samples/sample2.cpp;allocateAnArrayOfTwelveInts();1;0;0;0;48;0
 ```
 
 Note: This tool emits CSV files in semicolon-separated form because the C++ function names may include commas.

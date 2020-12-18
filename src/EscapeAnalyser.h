@@ -15,23 +15,24 @@
 namespace EscapeAnalysisTool {
 
 /**
- * Wraps state for performing LLVM's escape analysis on a .ll file.
+ * Drives LLVM's escape analysis on `.ll` files, writing the results to a
+ * supplied `CSVWriter`.
  */
 class EscapeAnalyser {
 private:
     /**
-     * Required for parsing the LLVM IR code
+     * Both required for parsing the LLVM IR code.
      */
     llvm::LLVMContext& context;
     llvm::SMDiagnostic& err;
 
     /**
-     * Where to write the CSV output to
+     * Where to write the CSV output to.
      */
     CSVWriter& writer;
 
     /**
-     * Whether to print verbose/debug information to std::cout
+     * Whether to log additional information to std::cout.
      */
     bool verbose;
 

@@ -20,9 +20,9 @@ public:
     ~CSVWriter();
 
     /**
-     * Adds a row to the CSV file.
+     * Write a row to the CSV file.
      */
-    void addEntry(const FunctionSummary& summary);
+    void addEntry(const FunctionSummary&& summary);
 };
 
 } // namespace EscapeAnalysisTool

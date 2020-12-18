@@ -13,13 +13,26 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/TypeSize.h>
 
 #include "CSVWriter.h"
 #include "FunctionSummary.h"
 
 #define MAX_USES_TO_EXPLORE 10000
+
+namespace {
+
+uint64_t getAllocationStaticSize(const llvm::AllocaInst& allocation, const llvm::DataLayout& dataLayout)
+{
+    llvm::Type *allocatedType = allocation.getAllocatedType();
+    llvm::TypeSize typeSize = dataLayout.getTypeAllocSize(allocatedType);
+    return typeSize.getFixedSize();
+}
+
+} // anonymous namespace
 
 namespace EscapeAnalysisTool {
 
@@ -43,11 +56,15 @@ void EscapeAnalyser::processFile(const std::string& filePath)
 
 void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module)
 {
-    int numStackAllocationsTotal = 0;
-    int numEscapingStackAllocations = 0;
+    // Counters for the number of invocations
+    int numAllocaInvocations = 0;
+    int numEscapingAllocaInvocations = 0;
+    int numDynamicallySizedAllocaInvocations = 0;
+    int numDynamicallySizedEscapingAllocaInvocations = 0;
 
-    uint64_t stackAllocationsTotalSize = 0;
-    uint64_t escapingStackAllocationsTotalSize = 0;
+    // Counters to track the amount of memory allocated
+    uint64_t totalStaticallyAllocatedStackMemory = 0;
+    uint64_t totalStaticallyAllocatedEscapingStackMemory = 0;
 
     llvm::DataLayout dataLayout(module.get());
 
@@ -58,25 +75,40 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
             if (instruction.getOpcode() != llvm::Instruction::Alloca)
                 continue;
 
-            // Extract the size of the allocatoin
-            const auto& allocation = reinterpret_cast<const llvm::AllocaInst&>(instruction);
-            uint64_t allocationSize = dataLayout.getTypeAllocSize(allocation.getAllocatedType()).getFixedSize();
-            // TODO: Handle non-constant allocation sizes (dynamically-sized)
+            numAllocaInvocations++;
 
-            numStackAllocationsTotal++;
-            stackAllocationsTotalSize += allocationSize;
+            const auto& allocation = reinterpret_cast<const llvm::AllocaInst&>(instruction);
+            bool isStaticAllocation = allocation.isStaticAlloca();
+            uint64_t allocationSize;
+
+            if (isStaticAllocation) {
+                allocationSize = getAllocationStaticSize(allocation, dataLayout);
+                totalStaticallyAllocatedStackMemory += allocationSize;
+            }
+            else {
+                numDynamicallySizedAllocaInvocations++;
+            }
 
             // Run the analysis
             bool returnCaptures = true;
             bool storeCaptures = true;
             if (llvm::PointerMayBeCaptured(&allocation, returnCaptures, storeCaptures, MAX_USES_TO_EXPLORE)) {
 
-                // We found a capture
-                numEscapingStackAllocations++;
-                escapingStackAllocationsTotalSize += allocationSize;
+                // We found an escaping allocation
+                numEscapingAllocaInvocations++;
+
+                // Update counters/size trackers
+                if (isStaticAllocation) {
+                    totalStaticallyAllocatedEscapingStackMemory += allocationSize;
+                }
+                else {
+                    numDynamicallySizedEscapingAllocaInvocations++;
+                }
 
                 if (verbose) {
-                    std::cerr << "Capture found\n    function: " << llvm::demangle(function.getName().data()) << "\n    dump: ";
+                    std::cerr << "Capture found\n"
+                              << "    function: " << llvm::demangle(function.getName().data()) << "\n"
+                              << "        dump: ";
                     instruction.dump();
                 }
             }
@@ -87,10 +119,12 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
     writer.addEntry(FunctionSummary{
             .fileName = module->getSourceFileName(),
             .functionName = functionName,
-            .totalStackAllocations = numStackAllocationsTotal,
-            .totalEscapingStackAllocations = numEscapingStackAllocations,
-            .totalAllocatedStackMemory = stackAllocationsTotalSize,
-            .totalAllocatedEscapingStackMemory = escapingStackAllocationsTotalSize
+            .numAllocaInvocations = numAllocaInvocations,
+            .numEscapingAllocaInvocations = numEscapingAllocaInvocations,
+            .numDynamicallySizedAllocaInvocations = numDynamicallySizedAllocaInvocations,
+            .numDynamicallySizedEscapingAllocaInvocations = numDynamicallySizedEscapingAllocaInvocations,
+            .totalStaticallyAllocatedStackMemory = totalStaticallyAllocatedStackMemory,
+            .totalStaticallyAllocatedEscapingStackMemory = totalStaticallyAllocatedEscapingStackMemory
     });
 }
 
