@@ -1,2 +1,0 @@
-FileName;FunctionName;NumStackAllocations;NumEscapingStackAllocations;TotalAllocatedStackMemory;TotalEscapingAllocateStackMemory
-samples/sample2.cpp;allocateAnArrayOfTwelveInts();1;0;48;0
