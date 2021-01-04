@@ -1,8 +1,11 @@
 #include "EscapeAnalyser.h"
 
 #include <algorithm>
-#include <iostream>
 #include <string>
+
+#include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
 
 #include <llvm/Analysis/CaptureTracking.h>
 #include <llvm/Demangle/Demangle.h>
@@ -36,20 +39,35 @@ uint64_t getAllocationStaticSize(const llvm::AllocaInst& allocation, const llvm:
 
 namespace EscapeAnalysisTool {
 
-EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer, bool verbose)
-    : context(context), err(err), writer(writer), verbose(verbose)
+EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer,
+                               bool verbose, bool dumpAllCaptures)
+    : context(context), err(err), writer(writer), verbose(verbose), dumpAllCaptures(dumpAllCaptures)
 {
 }
 
 void EscapeAnalyser::processFile(const std::string& filePath)
 {
+    BOOST_LOG_TRIVIAL(info) << "Processing file: " << filePath;
+
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
     if (!module) {
-        std::cerr << "Bad input file: " << filePath << std::endl;
+        BOOST_LOG_TRIVIAL(fatal) << "Bad input file: " << filePath;
         exit(2);
     }
 
+    int numFunctions = module->getFunctionList().size();
+    if (verbose) {
+        BOOST_LOG_TRIVIAL(info) << "Found " << numFunctions << " functions";
+    }
+
+    int count = 1;
     for (const llvm::Function& function : module->functions()) {
+
+        if (verbose) {
+            BOOST_LOG_TRIVIAL(info) << "Processing function " << count++ << "/" << numFunctions
+                                    << ": " << llvm::demangle(function.getName().data());    
+        }
+
         processFunction(function, module);
     }
 }
@@ -105,10 +123,13 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
                     numDynamicallySizedEscapingAllocaInvocations++;
                 }
 
-                if (verbose) {
-                    std::cerr << "Capture found\n"
-                              << "    function: " << llvm::demangle(function.getName().data()) << "\n"
-                              << "        dump: ";
+                // Bit of a hack, but both debug logs and dumpAllCaptures are enabled iff the
+                // program is invoked with the -d flag. We'll never have one of these enabled
+                // without the other.
+                if (dumpAllCaptures) {
+                    BOOST_LOG_TRIVIAL(debug) << "Capture found\n"
+                            << "    function: " << llvm::demangle(function.getName().data()) << "\n"
+                            << "        dump: ";
                     instruction.dump();
                 }
             }

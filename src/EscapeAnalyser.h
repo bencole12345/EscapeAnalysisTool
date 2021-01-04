@@ -36,8 +36,14 @@ private:
      */
     bool verbose;
 
+    /**
+     * Whether to dump any capture that we find to std::cout.
+     */
+    bool dumpAllCaptures;
+
 public:
-    EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer, bool verbose);
+    EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer,
+                   bool verbose = false, bool dumpAllCaptures = false);
 
     /**
      * Performs the analysis on a .ll file, writing the results to `writer`.
