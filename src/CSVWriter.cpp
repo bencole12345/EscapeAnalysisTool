@@ -7,7 +7,6 @@
 namespace {
 
 const char * headings[] = {
-    "FileName",
     "FunctionName",
     "NumAllocaInvocations",
     "NumEscapingAllocaInvocations",
@@ -52,8 +51,7 @@ CSVWriter::~CSVWriter()
 
 void CSVWriter::addEntry(const FunctionSummary&& summary)
 {
-    outputStream << summary.fileName << separator
-                 << summary.functionName << separator
+    outputStream << summary.functionName << separator
                  << summary.numAllocaInvocations << separator
                  << summary.numEscapingAllocaInvocations << separator
                  << summary.numDynamicallySizedAllocaInvocations << separator

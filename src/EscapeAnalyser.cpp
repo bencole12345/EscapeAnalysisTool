@@ -40,8 +40,8 @@ uint64_t getAllocationStaticSize(const llvm::AllocaInst& allocation, const llvm:
 namespace EscapeAnalysisTool {
 
 EscapeAnalyser::EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer,
-                               bool verbose, bool dumpAllCaptures)
-    : context(context), err(err), writer(writer), verbose(verbose), dumpAllCaptures(dumpAllCaptures)
+                               EscapeAnalyserSettings settings)
+    : context(context), err(err), writer(writer), settings(settings)
 {
 }
 
@@ -49,6 +49,11 @@ void EscapeAnalyser::processFile(const std::string& filePath)
 {
     BOOST_LOG_TRIVIAL(info) << "Processing file: " << filePath;
 
+    if (settings.verbose) {
+        BOOST_LOG_TRIVIAL(info) << "Parsing...";
+    }
+
+    // TODO: Use the lazily loaded module option here instead
     std::unique_ptr<llvm::Module> module(llvm::parseIRFile(filePath, err, context));
     if (!module) {
         BOOST_LOG_TRIVIAL(fatal) << "Bad input file: " << filePath;
@@ -56,20 +61,39 @@ void EscapeAnalyser::processFile(const std::string& filePath)
     }
 
     int numFunctions = module->getFunctionList().size();
-    if (verbose) {
-        BOOST_LOG_TRIVIAL(info) << "Found " << numFunctions << " functions";
+    if (settings.verbose) {
+        BOOST_LOG_TRIVIAL(info) << "Found " << numFunctions << " functions, processing now...";
     }
 
     int count = 1;
     for (const llvm::Function& function : module->functions()) {
 
-        if (verbose) {
-            BOOST_LOG_TRIVIAL(info) << "Processing function " << count++ << "/" << numFunctions
-                                    << ": " << llvm::demangle(function.getName().data());    
+        bool requiresProcessing = function.getInstructionCount() > 0 || settings.keepEmptyFunctions;
+
+        if (settings.verbose && count % 1000 == 0) {
+            float percentageComplete = (float)count / (float)numFunctions;
+            BOOST_LOG_TRIVIAL(info) << "Progress: " << percentageComplete << "%";
         }
 
-        processFunction(function, module);
+        else if (settings.superVerbose) {
+            if (requiresProcessing) {
+                BOOST_LOG_TRIVIAL(info) << "Processing function " << count << "/" << numFunctions
+                                        << ": " << llvm::demangle(function.getName().data());
+            }
+            else {
+                BOOST_LOG_TRIVIAL(info) << "Skipping empty function " << count << "/" << numFunctions
+                                        << ": " << llvm::demangle(function.getName().data());
+            }
+        }
+
+        if (requiresProcessing) {
+            processFunction(function, module);
+        }
+
+        count++;
     }
+
+    BOOST_LOG_TRIVIAL(info) << "Finished processing file " << filePath;
 }
 
 void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module)
@@ -112,7 +136,7 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
             bool storeCaptures = true;
             if (llvm::PointerMayBeCaptured(&allocation, returnCaptures, storeCaptures, MAX_USES_TO_EXPLORE)) {
 
-                // We found an escaping allocation
+                // We found an escaping stack allocation
                 numEscapingAllocaInvocations++;
 
                 // Update counters/size trackers
@@ -126,7 +150,7 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
                 // Bit of a hack, but both debug logs and dumpAllCaptures are enabled iff the
                 // program is invoked with the -d flag. We'll never have one of these enabled
                 // without the other.
-                if (dumpAllCaptures) {
+                if (settings.printDebugInfo) {
                     BOOST_LOG_TRIVIAL(debug) << "Capture found\n"
                             << "    function: " << llvm::demangle(function.getName().data()) << "\n"
                             << "        dump: ";
@@ -138,7 +162,6 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
 
     std::string functionName = llvm::demangle(function.getName().data());
     writer.addEntry(FunctionSummary{
-            .fileName = module->getSourceFileName(),
             .functionName = functionName,
             .numAllocaInvocations = numAllocaInvocations,
             .numEscapingAllocaInvocations = numEscapingAllocaInvocations,

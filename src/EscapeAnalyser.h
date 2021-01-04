@@ -14,6 +14,36 @@
 
 namespace EscapeAnalysisTool {
 
+struct EscapeAnalyserSettings {
+
+    /**
+     * Whether to log additional progress information.
+     */
+    bool verbose {false};
+
+    /**
+     * Whether to log every single function processed.
+     */
+    bool superVerbose {false};
+
+    /**
+     * Whether to keep functions containing zero instructions.
+     * 
+     * These are typically forward declarations, which we may want to exclude
+     * from the analysis.
+     */
+    bool keepEmptyFunctions {false};
+
+    /**
+     * Whether instructions containing escaping allocations should be logged.
+     * 
+     * This is for debugging purposes only and is not expected to be used in
+     * normal operation.
+     */
+    bool printDebugInfo {false};
+
+};
+
 /**
  * Drives LLVM's escape analysis on `.ll` files, writing the results to a
  * supplied `CSVWriter`.
@@ -32,18 +62,13 @@ private:
     CSVWriter& writer;
 
     /**
-     * Whether to log additional information to std::cout.
+     * The settings that the user supplied when the analyser was created.
      */
-    bool verbose;
-
-    /**
-     * Whether to dump any capture that we find to std::cout.
-     */
-    bool dumpAllCaptures;
+    EscapeAnalyserSettings settings;
 
 public:
     EscapeAnalyser(llvm::LLVMContext& context, llvm::SMDiagnostic& err, CSVWriter& writer,
-                   bool verbose = false, bool dumpAllCaptures = false);
+                   EscapeAnalyserSettings settings);
 
     /**
      * Performs the analysis on a .ll file, writing the results to `writer`.
@@ -55,7 +80,8 @@ public:
 private:
     /**
      * Performs the analysis on a single function, writing the results to `writer`.
-     * @param function
+     * 
+     * @param function The function to process
      */
     void processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module);
 

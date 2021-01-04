@@ -18,3 +18,6 @@ _deps
 # Build stuff
 build
 cmake-build-debug
+
+# EscapeAnalysisTool stuff
+*.csv

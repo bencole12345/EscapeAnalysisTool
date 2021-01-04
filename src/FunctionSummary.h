@@ -13,11 +13,6 @@ namespace EscapeAnalysisTool {
 struct FunctionSummary {
 
     /**
-     * The name of the source file from which the function came.
-     */
-    const std::string& fileName;
-
-    /**
      * The name of the function.
      */
     const std::string& functionName;
