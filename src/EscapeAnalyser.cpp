@@ -99,10 +99,10 @@ void EscapeAnalyser::processFile(const std::string& filePath)
 void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique_ptr<llvm::Module>& module)
 {
     // Counters for the number of invocations
-    int numAllocaInvocations = 0;
-    int numEscapingAllocaInvocations = 0;
-    int numDynamicallySizedAllocaInvocations = 0;
-    int numDynamicallySizedEscapingAllocaInvocations = 0;
+    unsigned int numAllocaInvocations = 0;
+    unsigned int numEscapingAllocaInvocations = 0;
+    unsigned int numDynamicallySizedAllocaInvocations = 0;
+    unsigned int numDynamicallySizedEscapingAllocaInvocations = 0;
 
     // Counters to track the amount of memory allocated
     uint64_t totalStaticallyAllocatedStackMemory = 0;
@@ -161,8 +161,11 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
     }
 
     std::string functionName = llvm::demangle(function.getName().data());
+    unsigned int numInstructions = function.getInstructionCount();
+
     writer.addEntry(FunctionSummary{
             .functionName = functionName,
+            .numInstructions = numInstructions,
             .numAllocaInvocations = numAllocaInvocations,
             .numEscapingAllocaInvocations = numEscapingAllocaInvocations,
             .numDynamicallySizedAllocaInvocations = numDynamicallySizedAllocaInvocations,

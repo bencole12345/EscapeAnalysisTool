@@ -18,26 +18,31 @@ struct FunctionSummary {
     const std::string& functionName;
 
     /**
+     * The number of instructions in the function.
+     */
+    unsigned int numInstructions;
+
+    /**
      * The number of static alloca calls in the function.
      */
-    int numAllocaInvocations;
+    unsigned int numAllocaInvocations;
 
     /**
      * The number of alloca calls whose returned pointers have been deemed to
      * be possibly-escaping.
      */
-    int numEscapingAllocaInvocations;
+    unsigned int numEscapingAllocaInvocations;
 
     /**
      * The number of alloca calls whose sizes are not compile-time constants.
      */
-    int numDynamicallySizedAllocaInvocations;
+    unsigned int numDynamicallySizedAllocaInvocations;
 
     /**
      * The number of alloca calls whose sizes are not compile-time constants
      * and whose returned pointers have been deemed to be possibly-escaping.
      */
-    int numDynamicallySizedEscapingAllocaInvocations;
+    unsigned int numDynamicallySizedEscapingAllocaInvocations;
 
     /**
      * The total amount of memory allocated in constant-sized alloca calls.
