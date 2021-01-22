@@ -18,6 +18,11 @@ struct FunctionSummary {
     const std::string& functionName;
 
     /**
+     * The name of the function before we demangled it.
+     */
+    const std::string& mangledName;
+
+    /**
      * The number of instructions in the function.
      */
     unsigned int numInstructions;

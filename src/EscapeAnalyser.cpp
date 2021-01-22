@@ -160,11 +160,13 @@ void EscapeAnalyser::processFunction(const llvm::Function& function, std::unique
         }
     }
 
-    std::string functionName = llvm::demangle(function.getName().data());
+    std::string functionNameMangled = function.getName().data();
+    std::string functionNameDemangled = llvm::demangle(functionNameMangled);
     unsigned int numInstructions = function.getInstructionCount();
 
     writer.addEntry(FunctionSummary{
-            .functionName = functionName,
+            .functionName = functionNameDemangled,
+            .mangledName = functionNameMangled,
             .numInstructions = numInstructions,
             .numAllocaInvocations = numAllocaInvocations,
             .numEscapingAllocaInvocations = numEscapingAllocaInvocations,
